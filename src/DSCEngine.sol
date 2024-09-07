@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import { DecentralizedStableCoin } from "./DecentralizedStableCoin.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 /**
  * @title DSCEngine
  * @author Yash Bharti
@@ -48,6 +49,13 @@ contract DSCEngine is ReentrancyGuard {
             s_priceFeeds[tokenAddress[i]] = priceFeedAddress[i];
         }
         i_dsc = DecentralizedStableCoin(dscAddress);
+    }
+
+    function getUsdValue(address token, uint256 amount) public view returns (uint256) {
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
+        (, int price, , , ) = priceFeed.latestRoundData();
+
+        return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION;
     }
 
     /**
