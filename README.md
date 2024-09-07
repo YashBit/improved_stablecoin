@@ -1,3 +1,15 @@
+1. Relative Stability - Pegged to the US Dollar
+   1. Chainlink Price Feed
+   2. Set a Function to Exchange ETH & BTC -> $$$ 
+2. Stability Mechanism - Minting (Algorithmic)
+   1. People can only mint the 
+3. Collateral Type - Exogenous (Crypto)
+   1. wETH
+   2. wBTC 
+
+
+
+
 ## Foundry
 
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
