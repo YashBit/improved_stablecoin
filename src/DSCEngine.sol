@@ -1,12 +1,14 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.19;
 
 import { OracleLib, AggregatorV3Interface } from "../src/libraries/OracleLib.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { DecentralizedStableCoin } from "./DecentralizedStableCoin.sol";
 
 contract DSCEngine is ReentrancyGuard {
-
     error DSCEngine__TokenAddressesAndPriceFeedAddressesAmountsDontMatch();
     error DSCEngine__NeedsMoreThanZero();
     error DSCEngine__TokenNotAllowed(address token);
@@ -27,10 +29,16 @@ contract DSCEngine is ReentrancyGuard {
     uint256 private constant PRECISION = 1e18;
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
     uint256 private constant FEED_PRECISION = 1e8;
+    uint256 private constant BASE_THRESHOLD = 50;
+    uint256 private constant MAX_THRESHOLD_CHANGE = 20;
+    uint256 private constant VOLATILITY_PERIOD = 1 days;
 
     mapping(address collateralToken => address priceFeed) private s_priceFeeds;
     mapping(address user => mapping(address collateralToken => uint256 amount)) private s_collateralDeposited;
     mapping(address user => uint256 amount) private s_DSCMinted;
+    mapping(address => uint256[]) private s_priceHistory;
+    mapping(address => uint256) private s_lastUpdateTimestamp;
+
     address[] private s_collateralTokens;
 
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
@@ -59,6 +67,73 @@ contract DSCEngine is ReentrancyGuard {
             s_collateralTokens.push(tokenAddresses[i]);
         }
         i_dsc = DecentralizedStableCoin(dscAddress);
+    }
+
+    function updatePriceHistory(address token) internal {
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
+        (, int256 price,,,) = priceFeed.staleCheckLatestRoundData();
+        uint256 currentPrice = uint256(price);
+
+        if (block.timestamp >= s_lastUpdateTimestamp[token] + VOLATILITY_PERIOD) {
+            s_priceHistory[token].push(currentPrice);
+            if (s_priceHistory[token].length > 30) {
+                // Keep last 30 days
+                // Remove the oldest price
+                for (uint256 i = 0; i < s_priceHistory[token].length - 1; i++) {
+                    s_priceHistory[token][i] = s_priceHistory[token][i + 1];
+                }
+                s_priceHistory[token].pop();
+            }
+            s_lastUpdateTimestamp[token] = block.timestamp;
+        }
+    }
+
+    // Add this function to calculate volatility
+    function calculateVolatility(address token) internal view returns (uint256) {
+        if (s_priceHistory[token].length < 2) return 0;
+    
+        uint256 sumSquaredDeviations = 0;
+        uint256 mean = 0;
+    
+        for (uint256 i = 0; i < s_priceHistory[token].length; i++) {
+            mean += s_priceHistory[token][i];
+        }
+        mean /= s_priceHistory[token].length;
+    
+        for (uint256 i = 0; i < s_priceHistory[token].length; i++) {
+            int256 deviation = int256(s_priceHistory[token][i]) - int256(mean);
+            sumSquaredDeviations += uint256(deviation * deviation);
+        }
+    
+        return Math.sqrt(sumSquaredDeviations / s_priceHistory[token].length);
+    }
+
+    // Modify the getLiquidationThreshold function
+    function getLiquidationThreshold(address token) public view returns (uint256) {
+        uint256 volatility = calculateVolatility(token);
+        uint256 volatilityAdjustment = (volatility * MAX_THRESHOLD_CHANGE) / (FEED_PRECISION);
+
+        if (volatilityAdjustment > MAX_THRESHOLD_CHANGE) {
+            volatilityAdjustment = MAX_THRESHOLD_CHANGE;
+        }
+
+        return BASE_THRESHOLD + volatilityAdjustment;
+    }
+
+    // Update the _calculateHealthFactor function to use the dynamic threshold
+    function _calculateHealthFactor(
+        uint256 totalDscMinted,
+        uint256 collateralValueInUsd,
+        address collateralToken
+    )
+        internal
+        view
+        returns (uint256)
+    {
+        if (totalDscMinted == 0) return type(uint256).max;
+        uint256 collateralAdjustedForThreshold =
+            (collateralValueInUsd * getLiquidationThreshold(collateralToken)) / LIQUIDATION_PRECISION;
+        return (collateralAdjustedForThreshold * PRECISION) / totalDscMinted;
     }
 
     function depositCollateralAndMintDsc(
@@ -241,17 +316,9 @@ contract DSCEngine is ReentrancyGuard {
         return _getAccountInformation(user);
     }
 
-    function getUsdValue(
-        address token,
-        uint256 amount
-    )
-        external
-        view
-        returns (uint256)
-    {
+    function getUsdValue(address token, uint256 amount) external view returns (uint256) {
         return _getUsdValue(token, amount);
     }
-
 
     function getCollateralBalanceOfUser(address user, address token) external view returns (uint256) {
         return s_collateralDeposited[user][token];
