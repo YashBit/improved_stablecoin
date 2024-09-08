@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // Minting: Algorithmic
 // Relative Stability: Pegged to USD
 // This contract is governed by DSC Engine, ERC20 Implementation of StableCoin
+
+
 contract DecentralizedStableCoin is ERC20Burnable, Ownable {
     error DecentralizedStableCoin__MustBeGreaterThanZero();
     error DecentralizedStableCoin__BurnAmountExceedsBalance();
