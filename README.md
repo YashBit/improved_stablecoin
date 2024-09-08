@@ -1,78 +1,83 @@
-1. Relative Stability - Pegged to the US Dollar
-   1. Chainlink Price Feed
-   2. Set a Function to Exchange ETH & BTC -> $$$ 
-2. Stability Mechanism - Minting (Algorithmic)
-   1. People can only mint the 
-3. Collateral Type - Exogenous (Crypto)
-   1. wETH
-   2. wBTC 
+# Better DSCEngine: Decentralized Stablecoin Engine with Dynamic Liquidation Threshold Based on Market Volatility
 
+DSCEngine is a smart contract system for a decentralized stablecoin with dynamic collateralization features. It allows users to mint, burn, and manage a stablecoin backed by various collateral types.
 
+## Features
 
+- Multi-collateral support
+- Minting and burning of stablecoins
+- Collateral deposit and withdrawal
+- Liquidation mechanism
+- Dynamic liquidation threshold based on market volatility
+- Health factor calculation for user positions
 
-## Foundry
+## Smart Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+- `DSCEngine.sol`: Main contract handling core functionalities
+- `DecentralizedStableCoin.sol`: ERC20 token contract for the stablecoin
 
-Foundry consists of:
+## Key Components
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+### Collateral Management
+- Users can deposit multiple types of collateral tokens
+- Each collateral type has an associated price feed
 
-## Documentation
+### Stablecoin Minting
+- Users can mint stablecoins against their deposited collateral
+- Minting is subject to maintaining a healthy collateralization ratio
 
-https://book.getfoundry.sh/
+### Health Factor
+- A user's position health is measured by the "health factor"
+- Positions with a health factor below the minimum are subject to liquidation
 
-## Usage
+### Dynamic Liquidation Threshold
+- The liquidation threshold adjusts based on market volatility
+- Higher volatility leads to a higher threshold, providing more protection against rapid price movements
 
-### Build
+## Key Functions
 
-```shell
-$ forge build
+- `depositCollateralAndMintDsc`: Deposit collateral and mint stablecoins in one transaction
+- `redeemCollateralForDsc`: Burn stablecoins to redeem collateral
+- `liquidate`: Allow liquidators to liquidate unhealthy positions
+
+## Advanced Feature: Dynamic Liquidation Threshold
+
+The dynamic liquidation threshold feature adjusts the required collateralization ratio based on market conditions:
+
+1. Price history is maintained for each collateral type
+2. Volatility is calculated based on recent price movements
+3. The liquidation threshold increases during high volatility periods
+4. This adaptive approach provides better protection against market fluctuations
+
+## Installation
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Compile contracts: `npx hardhat compile`
+
+## Testing
+
+Run the test suite:
+
+```
+npx hardhat test
 ```
 
-### Test
+## Deployment
 
-```shell
-$ forge test
-```
+1. Set up your `.env` file with required parameters
+2. Run deployment script: `npx hardhat run scripts/deploy.js --network <your-network>`
 
-### Format
+## Security Considerations
 
-```shell
-$ forge fmt
-```
+- This contract has not been audited. Use at your own risk.
+- Ensure proper access controls and input validation in production.
+- Thoroughly test all scenarios, especially around liquidations and extreme market conditions.
 
-### Gas Snapshots
+## Contributing
 
-```shell
-$ forge snapshot
-```
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### Anvil
+## License
 
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+This project is licensed under the MIT License.
