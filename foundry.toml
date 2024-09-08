@@ -7,7 +7,8 @@ remappings = [
     '@openzeppelin/contracts=lib/openzeppelin-contracts/contracts',
 ]
 
-
+[fuzz]
+runs = 2000
 
 [etherscan]
 mainnet = { key = "${ETHERSCAN_API_KEY}" }
